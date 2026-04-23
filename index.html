@@ -80,25 +80,39 @@
       </div>
       
       <div class="flex items-center gap-4 flex-wrap mt-4 md:mt-0">
-        <div class="flex items-center bg-indigo-500/10 border border-indigo-500/30 rounded-lg p-1 px-3" title="Click to reveal API Key">
+        <!-- API KEY SECTION WITH COPY BUTTON -->
+        <div class="flex items-center bg-indigo-500/10 border border-indigo-500/30 rounded-lg p-1 px-3">
           <i class="fa-solid fa-key text-indigo-400 mr-2 text-sm"></i>
           <span class="text-xs font-bold text-slate-300 mr-2">API KEY:</span>
-          <div class="relative group cursor-pointer select-none" onclick="window.toggleApiKey()">
-            <code id="display-apikey" class="text-sm font-bold text-indigo-400 tracking-wider blur-md transition-all">AK_LOADING</code>
+          <div class="relative group cursor-pointer mr-2" onclick="window.toggleApiKey()" title="Click to reveal">
+            <code id="display-apikey" class="text-sm font-bold text-indigo-400 tracking-wider blur-md transition-all select-none">AK_LOADING</code>
             <div id="eye-icon" class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-indigo-900/80 rounded"><i class="fa-solid fa-eye text-white text-xs"></i></div>
           </div>
+          <!-- NEW COPY BUTTON -->
+          <button onclick="window.copyApiKey()" id="copy-btn" class="ml-1 text-slate-400 hover:text-white transition-colors" title="Copy to Clipboard">
+            <i class="fa-solid fa-copy"></i>
+          </button>
         </div>
+
         <div class="flex items-center bg-slate-800 rounded-lg border border-slate-700 p-1">
           <select id="device-selector" onchange="window.changeDevice()" class="bg-slate-900 text-white text-sm font-semibold rounded px-2 py-1 outline-none border border-slate-700">
             <option value="BoardA">Board A (Main)</option><option value="BoardB">Board B (Garden)</option>
           </select>
         </div>
-        <div id="status" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700"><i class="fa-solid fa-bolt"></i> Realtime</div>
+        
+        <!-- RESTORED CSV EXPORT BUTTON -->
+        <button onclick="window.exportCSV()" class="text-slate-400 hover:text-indigo-400 transition-colors bg-slate-800 p-2 rounded-lg border border-slate-700 flex items-center gap-2 text-sm font-bold" title="Download Data CSV">
+          <i class="fa-solid fa-download"></i> <span class="hidden lg:inline">CSV</span>
+        </button>
+
+        <div id="status" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700"><i class="fa-solid fa-bolt"></i> Offline</div>
+        
         <button onclick="window.tryEditMode()" id="edit-btn" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700"><i class="fa-solid fa-lock"></i> Edit</button>
         <button onclick="window.logout()" class="text-slate-500 hover:text-red-400 transition-colors ml-2" title="Logout"><i class="fa-solid fa-right-from-bracket text-lg"></i></button>
       </div>
     </header>
 
+    <!-- Edit Toolbar (ALL WIDGETS RESTORED) -->
     <div id="edit-toolbar" class="hidden bg-slate-800 border-b border-slate-700 p-4 shadow-inner">
       <div class="max-w-6xl mx-auto flex flex-wrap gap-2 items-center">
         <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2">Widgets:</span>
@@ -106,6 +120,9 @@
         <button onclick="window.addWidget('gauge')" class="btn-tool text-orange-400"><i class="fa-solid fa-gauge"></i> Gauge</button>
         <button onclick="window.addWidget('button')" class="btn-tool text-emerald-400"><i class="fa-solid fa-toggle-on"></i> Button</button>
         <button onclick="window.addWidget('slider')" class="btn-tool text-purple-400"><i class="fa-solid fa-sliders"></i> Slider</button>
+        <button onclick="window.addWidget('color')" class="btn-tool text-pink-400"><i class="fa-solid fa-palette"></i> Color</button>
+        <button onclick="window.addWidget('terminal')" class="btn-tool text-slate-300"><i class="fa-solid fa-terminal"></i> Terminal</button>
+        <button onclick="window.addWidget('graph')" class="btn-tool text-blue-400"><i class="fa-solid fa-chart-line"></i> Graph</button>
       </div>
     </div>
 
@@ -134,9 +151,9 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-    // 🔴🔴🔴 YOUR FIREBASE CONFIGURATION GOES HERE 🔴🔴🔴
+// 🔴🔴🔴 YOUR FIREBASE CONFIGURATION GOES HERE 🔴🔴🔴
     // Once you create a Firebase project, paste your keys here:
     let firebaseConfig = {
       apiKey: "AIzaSyBgtQk5LkanpROvrfNz6pWqFlh6ie14LFA",
@@ -147,7 +164,7 @@
       appId: "1:869841023673:web:280eed0fdbd4117e78e168"
     };
 
-    // Auto-detect Canvas environment for live previews (Leaves your config untouched for Vercel!)
+
     if (typeof __firebase_config !== 'undefined') firebaseConfig = JSON.parse(__firebase_config);
 
     const app = initializeApp(firebaseConfig);
@@ -163,19 +180,16 @@
     let widgets = [{ id: 'w_1', type: 'display', pin: 'V0', label: 'Moisture', tabId: 'tab_1' }];
     let currentDevice = "BoardA";
     let pinsData = {}; 
+    let historyData = {}; // Stores historical data for Charts and CSV
     let isEditMode = false;
     let charts = {}; 
 
-    // Listeners
     let layoutUnsub = null;
     let deviceUnsub = null;
 
-    // Get proper database path
     function getBasePath() {
       if (!currentUser) return "";
-      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default';
-      // If deployed outside Canvas, default to simple 'users' collection
-      return typeof __app_id !== 'undefined' ? `artifacts/${appId}/users/${currentUser.uid}` : `users/${currentUser.uid}`;
+      return typeof __app_id !== 'undefined' ? `artifacts/${__app_id}/users/${currentUser.uid}` : `users/${currentUser.uid}`;
     }
 
     // --- AUTH LOGIC ---
@@ -185,8 +199,7 @@
         document.getElementById('auth-screen').classList.add('hidden'); 
         document.getElementById('dashboard-screen').classList.remove('hidden');
         document.getElementById('display-email').innerText = user.email;
-        document.getElementById('display-apikey').innerText = user.uid; // Firebase UID acts as the Secure API Key
-        
+        document.getElementById('display-apikey').innerText = user.uid; 
         loadCloudData();
       } else {
         currentUser = null;
@@ -197,42 +210,48 @@
       }
     });
 
-    window.handleGoogleAuth = async () => {
-      try { await signInWithPopup(auth, new GoogleAuthProvider()); } 
-      catch (error) { showError(error.message); }
-    };
-
+    window.handleGoogleAuth = async () => { try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (error) { showError(error.message); } };
     window.handleAuth = async (action) => {
-      const email = document.getElementById('auth-email').value;
-      const pass = document.getElementById('auth-pass').value;
+      const email = document.getElementById('auth-email').value; const pass = document.getElementById('auth-pass').value;
       if(!email || !pass) return showError("Please fill all fields");
-      
-      try {
-        if(action === 'login') await signInWithEmailAndPassword(auth, email, pass);
-        else await createUserWithEmailAndPassword(auth, email, pass);
-      } catch (error) { showError(error.message); }
+      try { if(action === 'login') await signInWithEmailAndPassword(auth, email, pass); else await createUserWithEmailAndPassword(auth, email, pass); } catch (error) { showError(error.message); }
     };
-
     window.logout = () => signOut(auth);
-    
-    function showError(msg) {
-      const el = document.getElementById('auth-error');
-      el.innerText = msg; el.classList.remove('hidden');
-    }
+    function showError(msg) { const el = document.getElementById('auth-error'); el.innerText = msg; el.classList.remove('hidden'); }
 
+    // --- COPY API KEY LOGIC ---
     window.toggleApiKey = () => {
       apiKeyVisible = !apiKeyVisible;
       document.getElementById('display-apikey').classList.toggle('blur-md');
       document.getElementById('eye-icon').innerHTML = apiKeyVisible ? '<i class="fa-solid fa-eye-slash text-white text-xs"></i>' : '<i class="fa-solid fa-eye text-white text-xs"></i>';
     };
 
+    window.copyApiKey = () => {
+      if (!currentUser) return;
+      const key = currentUser.uid;
+      const btn = document.getElementById('copy-btn');
+      
+      // Attempt to copy using modern clipboard API or fallback
+      try {
+        navigator.clipboard.writeText(key).then(() => showCopied(btn));
+      } catch (err) {
+        const textArea = document.createElement("textarea");
+        textArea.value = key; document.body.appendChild(textArea); textArea.select();
+        document.execCommand("copy"); document.body.removeChild(textArea);
+        showCopied(btn);
+      }
+    };
+
+    function showCopied(btn) {
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i>';
+      setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
+    }
+
     // --- REALTIME CLOUD SYNC ---
     function loadCloudData() {
-      const basePath = getBasePath();
-      
-      // 1. Listen for Layout Changes (Tabs & Widgets)
       if(layoutUnsub) layoutUnsub();
-      layoutUnsub = onSnapshot(doc(db, basePath, "config"), (docSnap) => {
+      layoutUnsub = onSnapshot(doc(db, getBasePath(), "config"), (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
           if(data.tabs) tabs = data.tabs;
@@ -240,34 +259,41 @@
         }
         window.renderTabs(); window.renderWidgets();
       });
-
       listenToDevice();
     }
 
     function listenToDevice() {
       if(deviceUnsub) deviceUnsub();
-      // Listen for Live Hardware Data updates instantly!
+      historyData = {}; // Clear graph data on device switch
+      
       deviceUnsub = onSnapshot(doc(db, getBasePath() + "/devices", currentDevice), (docSnap) => {
-        if (docSnap.exists()) {
-          pinsData = docSnap.data();
-        } else {
-          pinsData = {};
-        }
+        if (docSnap.exists()) pinsData = docSnap.data();
+        else pinsData = {};
         
         const statusEl = document.getElementById('status');
         let isOffline = (!pinsData.last_ping || (Date.now() - parseInt(pinsData.last_ping) > 15000));
         statusEl.className = isOffline ? "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/30" : "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
         statusEl.innerHTML = isOffline ? '<i class="fa-solid fa-triangle-exclamation"></i> Offline' : '<i class="fa-solid fa-bolt"></i> Realtime Sync';
 
+        // Track History for Graphs and CSV
+        let now = new Date().toLocaleTimeString();
+        widgets.forEach(w => {
+          let val = pinsData[w.pin] || 0;
+          if(!historyData[w.pin]) historyData[w.pin] = [];
+          
+          // Only track numerical data for graphs
+          if (!isNaN(parseFloat(val))) {
+            historyData[w.pin].push({time: now, val: parseFloat(val)});
+            if(historyData[w.pin].length > 50) historyData[w.pin].shift(); // Keep last 50 points
+          }
+        });
+
         if(!isEditMode) updateUI();
       });
     }
 
     window.changeDevice = () => { currentDevice = document.getElementById('device-selector').value; listenToDevice(); };
-
-    async function saveLayoutToCloud() {
-      await setDoc(doc(db, getBasePath(), "config"), { tabs: tabs, widgets: widgets }, { merge: true });
-    }
+    async function saveLayoutToCloud() { await setDoc(doc(db, getBasePath(), "config"), { tabs: tabs, widgets: widgets }, { merge: true }); }
 
     // --- UI LOGIC ---
     window.tryEditMode = () => {
@@ -316,21 +342,27 @@
       tabWidgets.forEach(w => {
         const div = document.createElement('div');
         div.className = "bg-slate-900 border border-slate-800 rounded-2xl shadow-xl flex flex-col relative overflow-hidden h-48 group transition-all";
+        if(w.type === 'graph' || w.type === 'terminal') div.classList.add('md:col-span-2');
         if(isEditMode) div.classList.add('border-dashed', 'border-slate-600');
 
-        let val = pinsData[w.pin] || '0'; 
-        let contentHTML = '';
+        let rawVal = pinsData[w.pin] || ((w.type==='terminal')?'':'0');
+        let val = rawVal; let contentHTML = '';
 
         if (w.type === 'display') contentHTML = `<div class="flex-1 flex flex-col items-center justify-center p-4"><div class="text-5xl font-bold text-cyan-400" id="val-${w.id}">${val}</div></div>`;
         else if (w.type === 'gauge') contentHTML = `<div class="flex-1 w-full p-2 relative"><canvas id="canvas-${w.id}"></canvas><div class="absolute inset-0 flex items-end pb-4 justify-center text-3xl font-bold text-orange-400 pointer-events-none" id="val-${w.id}">${val}</div></div>`;
         else if (w.type === 'button') { let isOn = val == 1; contentHTML = `<div class="flex-1 flex items-center justify-center p-4"><button onclick="window.togglePin('${w.pin}')" id="btn-${w.id}" disabled="${isEditMode}" class="w-24 h-24 rounded-full border-4 flex items-center justify-center text-2xl transition-all ${isOn ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/20' : 'bg-slate-800 border-slate-700 text-slate-500'} ${isEditMode ? 'opacity-50' : ''}"><i class="fa-solid fa-power-off"></i></button></div>`; }
         else if (w.type === 'slider') contentHTML = `<div class="flex-1 flex flex-col justify-center px-6 gap-4"><div class="text-right text-2xl font-bold text-indigo-400" id="val-${w.id}">${val}</div><input type="range" min="0" max="255" value="${val}" id="slider-${w.id}" ${isEditMode ? 'disabled' : ''} onchange="window.sendValue('${w.pin}', this.value)" class="w-full accent-indigo-500"></div>`;
+        else if (w.type === 'color') { val = (val.length > 2) ? val : '#000000'; contentHTML = `<div class="flex-1 flex flex-col items-center justify-center gap-2"><input type="color" id="val-${w.id}" value="${val}" onchange="window.sendValue('${w.pin}', this.value)" class="w-20 h-20 rounded-full cursor-pointer bg-transparent border-0" ${isEditMode ? 'disabled' : ''}></div>`; }
+        else if (w.type === 'terminal') contentHTML = `<div class="flex-1 flex flex-col p-2 gap-2"><div class="flex-1 bg-black rounded p-2 text-green-400 font-mono text-xs overflow-y-auto" id="val-${w.id}">${val}</div><input type="text" placeholder="Send command..." class="bg-slate-800 text-white px-2 py-1 rounded text-xs outline-none focus:border-indigo-500 border border-slate-700" onkeydown="if(event.key==='Enter'){window.sendValue('${w.pin}', this.value); this.value='';}"></div>`;
+        else if (w.type === 'graph') contentHTML = `<div class="flex-1 w-full p-2"><canvas id="canvas-${w.id}"></canvas></div>`;
 
-        let editOverlay = isEditMode ? `<div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center gap-4 z-10"><button onclick="window.openSettings('${w.id}')" class="bg-indigo-600 text-white w-10 h-10 rounded-full hover:scale-110"><i class="fa-solid fa-gear"></i></button><button onclick="window.deleteWidget('${w.id}')" class="bg-red-600 text-white w-10 h-10 rounded-full hover:scale-110"><i class="fa-solid fa-trash"></i></button></div>` : '';
+        let editOverlay = isEditMode ? `<div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center gap-4 z-10"><button onclick="window.openSettings('${w.id}')" class="bg-indigo-600 text-white w-10 h-10 rounded-full hover:scale-110 transition-transform"><i class="fa-solid fa-gear"></i></button><button onclick="window.deleteWidget('${w.id}')" class="bg-red-600 text-white w-10 h-10 rounded-full hover:scale-110 transition-transform"><i class="fa-solid fa-trash"></i></button></div>` : '';
 
         div.innerHTML = `<div class="bg-slate-800/50 px-4 py-2 border-b border-slate-800 flex justify-between items-center"><span class="font-bold text-slate-300 text-xs uppercase" id="title-${w.id}">${w.label}</span><span class="text-[10px] font-bold text-indigo-400 font-mono">${w.pin}</span></div>${contentHTML}${editOverlay}`;
         grid.appendChild(div);
 
+        // Init Chart JS
+        if (w.type === 'graph') charts[w.id] = new Chart(document.getElementById(`canvas-${w.id}`), { type: 'line', data: { labels: [], datasets: [{ label: w.label, data: [], borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.1)', fill: true, tension: 0.4, pointRadius: 0 }] }, options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: true } } } });
         if (w.type === 'gauge') charts[w.id] = new Chart(document.getElementById(`canvas-${w.id}`), { type: 'doughnut', data: { datasets: [{ data: [parseFloat(val)||0, 100-(parseFloat(val)||0)], backgroundColor: ['#f97316', '#1e293b'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, circumference: 180, rotation: -90, cutout: '80%', animation: false, plugins: { tooltip: { enabled: false } } } });
       });
     };
@@ -340,19 +372,24 @@
     
     window.sendValue = async (pin, val) => {
       if(isEditMode || !currentUser) return; 
-      pinsData[pin] = val; updateUI(); // Update instantly on screen
-      // Send instantly to Google Firestore!
+      pinsData[pin] = val; updateUI(); 
       await setDoc(doc(db, getBasePath() + "/devices", currentDevice), { [pin]: val }, { merge: true });
     };
 
     function updateUI() {
       widgets.filter(w => w.tabId === activeTab).forEach(w => {
-        let val = pinsData[w.pin] || '0';
+        let val = pinsData[w.pin] || ((w.type==='terminal')?'':'0');
         let el = document.getElementById(`val-${w.id}`);
         
-        if(w.type === 'display') { if(el) el.innerText = val; }
+        if(w.type === 'display' || w.type === 'terminal') { if(el) el.innerText = val; }
+        else if (w.type === 'color') { if(el && document.activeElement !== el) el.value = val; }
         else if (w.type === 'button') { let btn = document.getElementById(`btn-${w.id}`); if(btn) btn.className = (val == 1) ? "w-24 h-24 rounded-full border-4 flex items-center justify-center text-2xl transition-all bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/20" : "w-24 h-24 rounded-full border-4 flex items-center justify-center text-2xl transition-all bg-slate-800 border-slate-700 text-slate-500"; }
         else if (w.type === 'slider') { let slider = document.getElementById(`slider-${w.id}`); if(slider && document.activeElement !== slider) { slider.value = val; if(el) el.innerText = val; } }
+        else if (w.type === 'graph' && charts[w.id]) {
+          let h = historyData[w.pin] || [];
+          charts[w.id].data.labels = h.map(d=>d.time); charts[w.id].data.datasets[0].data = h.map(d=>d.val);
+          charts[w.id].update(); document.getElementById(`title-${w.id}`).innerText = `${w.label} : ${val}`;
+        }
         else if (w.type === 'gauge' && charts[w.id]) {
           let num = parseFloat(val)||0; charts[w.id].data.datasets[0].data = [num, Math.max(0, 100-num)];
           charts[w.id].update(); if(el) el.innerText = num;
@@ -360,7 +397,19 @@
       });
     }
 
-    // Auto-login if we are in the Preview Environment (to help you test)
+    // --- CSV EXPORT ---
+    window.exportCSV = () => {
+      let csv = "Device,Time,Pin,Value\n";
+      for(let pin in historyData) {
+        historyData[pin].forEach(pt => { csv += `${currentDevice},${pt.time},${pin},${pt.val}\n`; });
+      }
+      if(csv === "Device,Time,Pin,Value\n") { alert("No data recorded yet. Let the dashboard run for a few seconds first."); return; }
+      
+      let blob = new Blob([csv], {type: 'text/csv'});
+      let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${currentDevice}_Data.csv`; a.click();
+    };
+
+    // Initialize Firebase Auth Preview Fallback
     if (typeof __initial_auth_token !== 'undefined') {
        import("https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js").then(m => {
            if(__initial_auth_token) m.signInWithCustomToken(auth, __initial_auth_token);
