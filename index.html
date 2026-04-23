@@ -92,7 +92,7 @@
           <button onclick="window.copyApiKey()" id="copy-btn" class="ml-1 text-slate-400 hover:text-white transition-colors" title="Copy to Clipboard"><i class="fa-solid fa-copy"></i></button>
         </div>
 
-        <!-- NEW: DYNAMIC DEVICE MANAGER (Fixed min-width to prevent collapsing) -->
+        <!-- DYNAMIC DEVICE MANAGER -->
         <div class="flex items-center bg-slate-800 rounded-lg border border-slate-700 p-1 flex-shrink-0">
           <select id="device-selector" onchange="window.changeDevice()" class="bg-slate-900 text-white text-sm font-semibold rounded-l px-2 py-1 outline-none border-none min-w-[120px] max-w-[200px] truncate">
             <option value="BoardA">Main Board</option>
@@ -158,7 +158,7 @@
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-   // 🔴🔴🔴 YOUR FIREBASE CONFIGURATION GOES HERE 🔴🔴🔴
+    // 🔴🔴🔴 YOUR FIREBASE CONFIGURATION GOES HERE 🔴🔴🔴
     // Once you create a Firebase project, paste your keys here:
     let firebaseConfig = {
       apiKey: "AIzaSyBgtQk5LkanpROvrfNz6pWqFlh6ie14LFA",
@@ -193,6 +193,10 @@
 
     let layoutUnsub = null;
     let deviceUnsub = null;
+    
+    // NEW FIX: Local timing variables to reliably detect if the Arduino is Offline
+    let lastPingTime = 0;
+    let lastPingValue = "";
 
     function getBasePath() {
       if (!currentUser) return "";
@@ -208,9 +212,7 @@
         document.getElementById('display-email').innerText = user.email;
         document.getElementById('display-apikey').innerText = user.uid; 
         
-        // Render device list immediately to prevent visual collapse before cloud data arrives
         window.renderDeviceList(); 
-        
         loadCloudData();
       } else {
         currentUser = null;
@@ -250,7 +252,8 @@
     // --- REALTIME CLOUD SYNC ---
     function loadCloudData() {
       if(layoutUnsub) layoutUnsub();
-      layoutUnsub = onSnapshot(doc(db, getBasePath(), "config"), (docSnap) => {
+      // FIX: Ensure the Firestore path points to a valid Document (4 segments) by adding "/dashboard"
+      layoutUnsub = onSnapshot(doc(db, getBasePath() + "/dashboard", "config"), (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
           if(data.tabs) tabs = data.tabs;
@@ -273,18 +276,17 @@
         opt.value = dev.id; opt.innerText = dev.name;
         sel.appendChild(opt);
       });
-      sel.value = currentDevice; // keep current selection
+      sel.value = currentDevice; 
     };
 
     window.addNewDevice = () => {
       let name = prompt("Enter a name for the new Arduino Board (e.g., Garden Node):");
       if (!name) return;
       
-      // Generate a unique 6-character Device ID (e.g., DEV_X9F2A)
       let uniqueID = "DEV_" + Math.random().toString(36).substr(2, 5).toUpperCase();
       userDevices.push({ id: uniqueID, name: name + " (" + uniqueID + ")" });
       
-      currentDevice = uniqueID; // Switch to it immediately
+      currentDevice = uniqueID; 
       saveLayoutToCloud();
       listenToDevice();
       
@@ -298,13 +300,17 @@
       historyData = {}; 
       
       deviceUnsub = onSnapshot(doc(db, getBasePath() + "/devices", currentDevice), (docSnap) => {
-        if (docSnap.exists()) pinsData = docSnap.data();
-        else pinsData = {};
-        
-        const statusEl = document.getElementById('status');
-        let isOffline = (!pinsData.last_ping || (Date.now() - parseInt(pinsData.last_ping) > 15000));
-        statusEl.className = isOffline ? "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/30" : "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
-        statusEl.innerHTML = isOffline ? '<i class="fa-solid fa-triangle-exclamation"></i> Offline' : '<i class="fa-solid fa-bolt"></i> Realtime Sync';
+        if (docSnap.exists()) {
+          pinsData = docSnap.data();
+          
+          // FIX: Track actual arrival time locally instead of using Arduino's internal clock
+          if (pinsData.last_ping !== lastPingValue) {
+            lastPingValue = pinsData.last_ping;
+            lastPingTime = Date.now();
+          }
+        } else {
+          pinsData = {};
+        }
 
         let now = new Date().toLocaleTimeString();
         widgets.forEach(w => {
@@ -320,7 +326,20 @@
       });
     }
 
-    async function saveLayoutToCloud() { await setDoc(doc(db, getBasePath(), "config"), { tabs: tabs, widgets: widgets, devices: userDevices }, { merge: true }); }
+    // NEW FIX: Global Offline Checker runs constantly to visually verify connection
+    setInterval(() => {
+      const statusEl = document.getElementById('status');
+      if (!statusEl) return;
+      let isOffline = (!lastPingTime || (Date.now() - lastPingTime > 15000));
+      
+      statusEl.className = isOffline ? "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/30" : "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
+      statusEl.innerHTML = isOffline ? '<i class="fa-solid fa-triangle-exclamation"></i> Offline' : '<i class="fa-solid fa-bolt"></i> Realtime Sync';
+    }, 2000);
+
+    async function saveLayoutToCloud() { 
+      // FIX: Ensure the Firestore path points to a valid Document
+      await setDoc(doc(db, getBasePath() + "/dashboard", "config"), { tabs: tabs, widgets: widgets, devices: userDevices }, { merge: true }); 
+    }
 
     // --- UI LOGIC ---
     window.tryEditMode = () => {
@@ -405,9 +424,7 @@
     window.sendValue = async (pin, val) => {
       if(isEditMode || !currentUser) return; 
       pinsData[pin] = val; 
-      updateUI(); // Instant Visual Feedback
-      
-      // Push the manual override command directly to Firebase
+      updateUI(); 
       await setDoc(doc(db, getBasePath() + "/devices", currentDevice), { [pin]: val }, { merge: true });
     };
 
