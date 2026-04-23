@@ -92,10 +92,10 @@
           <button onclick="window.copyApiKey()" id="copy-btn" class="ml-1 text-slate-400 hover:text-white transition-colors" title="Copy to Clipboard"><i class="fa-solid fa-copy"></i></button>
         </div>
 
-        <!-- DYNAMIC DEVICE MANAGER -->
+        <!-- DYNAMIC DEVICE MANAGER (Clarified the default name) -->
         <div class="flex items-center bg-slate-800 rounded-lg border border-slate-700 p-1 flex-shrink-0">
           <select id="device-selector" onchange="window.changeDevice()" class="bg-slate-900 text-white text-sm font-semibold rounded-l px-2 py-1 outline-none border-none min-w-[120px] max-w-[200px] truncate">
-            <option value="BoardA">Main Board</option>
+            <option value="BoardA">BoardA (Main Node)</option>
           </select>
           <button onclick="window.addNewDevice()" class="px-3 border-l border-slate-600 text-indigo-400 hover:text-indigo-300 font-bold text-sm" title="Add New Hardware Device"><i class="fa-solid fa-plus"></i></button>
         </div>
@@ -158,7 +158,7 @@
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-    // 🔴🔴🔴 YOUR FIREBASE CONFIGURATION GOES HERE 🔴🔴🔴
+// 🔴🔴🔴 YOUR FIREBASE CONFIGURATION GOES HERE 🔴🔴🔴
     // Once you create a Firebase project, paste your keys here:
     let firebaseConfig = {
       apiKey: "AIzaSyBgtQk5LkanpROvrfNz6pWqFlh6ie14LFA",
@@ -168,7 +168,7 @@
       messagingSenderId: "869841023673",
       appId: "1:869841023673:web:280eed0fdbd4117e78e168"
     };
-
+    
 
     if (typeof __firebase_config !== 'undefined') firebaseConfig = JSON.parse(__firebase_config);
 
@@ -180,12 +180,18 @@
     let currentUser = null;
     let apiKeyVisible = false;
     
-    let userDevices = [{ id: 'BoardA', name: 'Main Board' }];
+    let userDevices = [{ id: 'BoardA', name: 'BoardA (Main Node)' }];
     let currentDevice = "BoardA";
 
     let activeTab = "tab_1";
     let tabs = [{id: 'tab_1', name: 'Main Workspace'}];
-    let widgets = [{ id: 'w_1', type: 'display', pin: 'V0', label: 'Moisture', tabId: 'tab_1' }];
+    
+    // DEFAULT WIDGETS UPDATED FOR DHT11 SENSOR
+    let widgets = [
+      { id: 'w_1', type: 'display', pin: 'V0', label: 'Temperature (°C)', tabId: 'tab_1' },
+      { id: 'w_2', type: 'display', pin: 'V1', label: 'Humidity (%)', tabId: 'tab_1' }
+    ];
+    
     let pinsData = {}; 
     let historyData = {}; 
     let isEditMode = false;
@@ -194,7 +200,6 @@
     let layoutUnsub = null;
     let deviceUnsub = null;
     
-    // NEW FIX: Local timing variables to reliably detect if the Arduino is Offline
     let lastPingTime = 0;
     let lastPingValue = "";
 
@@ -252,7 +257,7 @@
     // --- REALTIME CLOUD SYNC ---
     function loadCloudData() {
       if(layoutUnsub) layoutUnsub();
-      // FIX: Ensure the Firestore path points to a valid Document (4 segments) by adding "/dashboard"
+      
       layoutUnsub = onSnapshot(doc(db, getBasePath() + "/dashboard", "config"), (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
@@ -263,7 +268,13 @@
         window.renderDeviceList();
         window.renderTabs(); 
         window.renderWidgets();
+      }, (error) => {
+        // ALERT USER IF FIREBASE RULES BLOCK THEM
+        if (error.message.includes("permission") || error.message.includes("Missing or insufficient")) {
+           alert("FIREBASE SECURITY WARNING: Your Database Rules are blocking access (they may have expired after 30 days). Please go to Firebase -> Firestore -> Rules, and change them to allow read/write!");
+        }
       });
+      
       listenToDevice();
     }
 
@@ -303,7 +314,6 @@
         if (docSnap.exists()) {
           pinsData = docSnap.data();
           
-          // FIX: Track actual arrival time locally instead of using Arduino's internal clock
           if (pinsData.last_ping !== lastPingValue) {
             lastPingValue = pinsData.last_ping;
             lastPingTime = Date.now();
@@ -326,7 +336,7 @@
       });
     }
 
-    // NEW FIX: Global Offline Checker runs constantly to visually verify connection
+    // Global Offline Checker
     setInterval(() => {
       const statusEl = document.getElementById('status');
       if (!statusEl) return;
@@ -337,8 +347,11 @@
     }, 2000);
 
     async function saveLayoutToCloud() { 
-      // FIX: Ensure the Firestore path points to a valid Document
-      await setDoc(doc(db, getBasePath() + "/dashboard", "config"), { tabs: tabs, widgets: widgets, devices: userDevices }, { merge: true }); 
+      try {
+        await setDoc(doc(db, getBasePath() + "/dashboard", "config"), { tabs: tabs, widgets: widgets, devices: userDevices }, { merge: true }); 
+      } catch (err) {
+        alert("Failed to save layout to Firebase: " + err.message);
+      }
     }
 
     // --- UI LOGIC ---
@@ -425,7 +438,11 @@
       if(isEditMode || !currentUser) return; 
       pinsData[pin] = val; 
       updateUI(); 
-      await setDoc(doc(db, getBasePath() + "/devices", currentDevice), { [pin]: val }, { merge: true });
+      try {
+        await setDoc(doc(db, getBasePath() + "/devices", currentDevice), { [pin]: val }, { merge: true });
+      } catch (err) {
+        alert("Action blocked by Firebase Rules. Make sure your database is in Test Mode.");
+      }
     };
 
     function updateUI() {
