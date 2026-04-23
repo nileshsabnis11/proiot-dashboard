@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProIoT Cloud Workspace</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    .glass-panel { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
+  </style>
+</head>
+<body class="bg-[#0b1120] text-slate-200 min-h-screen selection:bg-indigo-500/30">
+
+  <!-- ================= AUTHENTICATION PORTAL ================= -->
+  <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+    <div class="absolute top-[-20%] left-[-10%] w-96 h-96 bg-indigo-600/20 rounded-full blur-[100px] pointer-events-none"></div>
+    <div class="absolute bottom-[-20%] right-[-10%] w-96 h-96 bg-blue-600/20 rounded-full blur-[100px] pointer-events-none"></div>
+
+    <div class="glass-panel rounded-3xl shadow-2xl p-8 w-full max-w-md relative z-10">
+      <div class="text-center mb-8">
+        <div class="inline-flex bg-gradient-to-br from-indigo-500 to-blue-600 p-3 rounded-2xl shadow-lg shadow-indigo-500/25 mb-5">
+          <i class="fa-solid fa-cloud-bolt text-2xl text-white"></i>
+        </div>
+        <h1 class="text-2xl font-bold text-white tracking-tight">ProIoT Cloud</h1>
+        <p class="text-slate-400 text-sm mt-2">Log in to manage your hardware.</p>
+      </div>
+
+      <div id="auth-error" class="hidden bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-xl text-sm mb-6 text-center font-medium"></div>
+
+      <button onclick="window.handleGoogleAuth()" class="w-full bg-white hover:bg-gray-50 text-slate-800 font-semibold py-3 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-3 mb-6">
+        <svg class="w-5 h-5" viewBox="0 0 24 24">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div class="flex items-center gap-4 mb-6">
+        <div class="flex-1 h-px bg-slate-800"></div>
+        <span class="text-xs text-slate-500 font-medium uppercase tracking-wider">Or email</span>
+        <div class="flex-1 h-px bg-slate-800"></div>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Email Address</label>
+          <input type="email" id="auth-email" placeholder="you@example.com" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-all">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Password</label>
+          <input type="password" id="auth-pass" placeholder="••••••••" class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-all">
+        </div>
+        
+        <div class="flex gap-3 pt-2">
+          <button onclick="window.handleAuth('login')" id="btn-login" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl shadow-lg transition-all">Sign In</button>
+          <button onclick="window.handleAuth('register')" id="btn-register" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-3 rounded-xl transition-all border border-slate-700">Sign Up</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= PRIVATE DASHBOARD ================= -->
+  <div id="dashboard-screen" class="hidden min-h-screen flex flex-col">
+    <header class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between sticky top-0 z-40">
+      <div class="flex items-center gap-3">
+        <div class="bg-gradient-to-br from-indigo-500 to-blue-600 p-2 rounded-xl"><i class="fa-solid fa-cloud-bolt text-xl text-white"></i></div>
+        <div>
+          <h1 class="text-xl font-bold text-white tracking-tight">ProIoT Workspace</h1>
+          <div class="flex items-center gap-2 mt-0.5"><span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider bg-slate-800 px-1.5 py-0.5 rounded">Account: <span id="display-email" class="text-white lowercase"></span></span></div>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-4 flex-wrap mt-4 md:mt-0">
+        <div class="flex items-center bg-indigo-500/10 border border-indigo-500/30 rounded-lg p-1 px-3" title="Click to reveal API Key">
+          <i class="fa-solid fa-key text-indigo-400 mr-2 text-sm"></i>
+          <span class="text-xs font-bold text-slate-300 mr-2">API KEY:</span>
+          <div class="relative group cursor-pointer select-none" onclick="window.toggleApiKey()">
+            <code id="display-apikey" class="text-sm font-bold text-indigo-400 tracking-wider blur-md transition-all">AK_LOADING</code>
+            <div id="eye-icon" class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-indigo-900/80 rounded"><i class="fa-solid fa-eye text-white text-xs"></i></div>
+          </div>
+        </div>
+        <div class="flex items-center bg-slate-800 rounded-lg border border-slate-700 p-1">
+          <select id="device-selector" onchange="window.changeDevice()" class="bg-slate-900 text-white text-sm font-semibold rounded px-2 py-1 outline-none border border-slate-700">
+            <option value="BoardA">Board A (Main)</option><option value="BoardB">Board B (Garden)</option>
+          </select>
+        </div>
+        <div id="status" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700"><i class="fa-solid fa-bolt"></i> Realtime</div>
+        <button onclick="window.tryEditMode()" id="edit-btn" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700"><i class="fa-solid fa-lock"></i> Edit</button>
+        <button onclick="window.logout()" class="text-slate-500 hover:text-red-400 transition-colors ml-2" title="Logout"><i class="fa-solid fa-right-from-bracket text-lg"></i></button>
+      </div>
+    </header>
+
+    <div id="edit-toolbar" class="hidden bg-slate-800 border-b border-slate-700 p-4 shadow-inner">
+      <div class="max-w-6xl mx-auto flex flex-wrap gap-2 items-center">
+        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2">Widgets:</span>
+        <button onclick="window.addWidget('display')" class="btn-tool text-cyan-400"><i class="fa-solid fa-tv"></i> Value</button>
+        <button onclick="window.addWidget('gauge')" class="btn-tool text-orange-400"><i class="fa-solid fa-gauge"></i> Gauge</button>
+        <button onclick="window.addWidget('button')" class="btn-tool text-emerald-400"><i class="fa-solid fa-toggle-on"></i> Button</button>
+        <button onclick="window.addWidget('slider')" class="btn-tool text-purple-400"><i class="fa-solid fa-sliders"></i> Slider</button>
+      </div>
+    </div>
+
+    <style>.btn-tool { background: #0f172a; border: 1px solid #334155; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; transition: 0.2s; } .btn-tool:hover { background: #334155; }</style>
+
+    <div class="max-w-6xl mx-auto px-6 pt-6 flex items-center gap-2 border-b border-slate-800 pb-px overflow-x-auto" id="tab-bar"></div>
+
+    <main class="flex-1 p-6 overflow-y-auto">
+      <div id="widget-grid" class="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+    </main>
+
+    <div id="settings-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+      <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+        <div class="bg-slate-800 px-6 py-4 border-b border-slate-700 flex justify-between items-center"><h3 class="font-bold text-white">Widget Settings</h3><button onclick="window.closeSettings()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button></div>
+        <div class="p-6 space-y-4">
+          <input type="hidden" id="edit-id">
+          <div><label class="block text-xs font-bold text-slate-400 uppercase mb-2">Title</label><input type="text" id="edit-label" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-white outline-none focus:border-indigo-500"></div>
+          <div><label class="block text-xs font-bold text-slate-400 uppercase mb-2">Virtual Pin</label><select id="edit-pin" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-white font-mono outline-none focus:border-indigo-500"><option value="V0">V0</option><option value="V1">V1</option><option value="V2">V2</option><option value="V3">V3</option><option value="V4">V4</option><option value="V5">V5</option></select></div>
+        </div>
+        <div class="p-4 border-t border-slate-700 flex justify-end gap-3"><button onclick="window.closeSettings()" class="text-slate-400 hover:text-white text-sm font-bold">Cancel</button><button onclick="window.saveSettings()" class="px-6 py-2 bg-indigo-600 rounded-lg text-white font-bold">Save</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIREBASE MODULES -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+    // 🔴🔴🔴 YOUR FIREBASE CONFIGURATION GOES HERE 🔴🔴🔴
+    // Once you create a Firebase project, paste your keys here:
+    let firebaseConfig = {
+      apiKey: "AIzaSyBgtQk5LkanpROvrfNz6pWqFlh6ie14LFA",
+      authDomain: "iot-nvs.firebaseapp.com",
+      projectId: "iot-nvs",
+      storageBucket: "iot-nvs.firebasestorage.app",
+      messagingSenderId: "869841023673",
+      appId: "1:869841023673:web:280eed0fdbd4117e78e168"
+    };
+
+    // Auto-detect Canvas environment for live previews (Leaves your config untouched for Vercel!)
+    if (typeof __firebase_config !== 'undefined') firebaseConfig = JSON.parse(__firebase_config);
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const ADMIN_PIN = "1234";
+    let currentUser = null;
+    let apiKeyVisible = false;
+    
+    let activeTab = "tab_1";
+    let tabs = [{id: 'tab_1', name: 'Main Workspace'}];
+    let widgets = [{ id: 'w_1', type: 'display', pin: 'V0', label: 'Moisture', tabId: 'tab_1' }];
+    let currentDevice = "BoardA";
+    let pinsData = {}; 
+    let isEditMode = false;
+    let charts = {}; 
+
+    // Listeners
+    let layoutUnsub = null;
+    let deviceUnsub = null;
+
+    // Get proper database path
+    function getBasePath() {
+      if (!currentUser) return "";
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default';
+      // If deployed outside Canvas, default to simple 'users' collection
+      return typeof __app_id !== 'undefined' ? `artifacts/${appId}/users/${currentUser.uid}` : `users/${currentUser.uid}`;
+    }
+
+    // --- AUTH LOGIC ---
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUser = user;
+        document.getElementById('auth-screen').classList.add('hidden'); 
+        document.getElementById('dashboard-screen').classList.remove('hidden');
+        document.getElementById('display-email').innerText = user.email;
+        document.getElementById('display-apikey').innerText = user.uid; // Firebase UID acts as the Secure API Key
+        
+        loadCloudData();
+      } else {
+        currentUser = null;
+        if(layoutUnsub) layoutUnsub();
+        if(deviceUnsub) deviceUnsub();
+        document.getElementById('auth-screen').classList.remove('hidden'); 
+        document.getElementById('dashboard-screen').classList.add('hidden');
+      }
+    });
+
+    window.handleGoogleAuth = async () => {
+      try { await signInWithPopup(auth, new GoogleAuthProvider()); } 
+      catch (error) { showError(error.message); }
+    };
+
+    window.handleAuth = async (action) => {
+      const email = document.getElementById('auth-email').value;
+      const pass = document.getElementById('auth-pass').value;
+      if(!email || !pass) return showError("Please fill all fields");
+      
+      try {
+        if(action === 'login') await signInWithEmailAndPassword(auth, email, pass);
+        else await createUserWithEmailAndPassword(auth, email, pass);
+      } catch (error) { showError(error.message); }
+    };
+
+    window.logout = () => signOut(auth);
+    
+    function showError(msg) {
+      const el = document.getElementById('auth-error');
+      el.innerText = msg; el.classList.remove('hidden');
+    }
+
+    window.toggleApiKey = () => {
+      apiKeyVisible = !apiKeyVisible;
+      document.getElementById('display-apikey').classList.toggle('blur-md');
+      document.getElementById('eye-icon').innerHTML = apiKeyVisible ? '<i class="fa-solid fa-eye-slash text-white text-xs"></i>' : '<i class="fa-solid fa-eye text-white text-xs"></i>';
+    };
+
+    // --- REALTIME CLOUD SYNC ---
+    function loadCloudData() {
+      const basePath = getBasePath();
+      
+      // 1. Listen for Layout Changes (Tabs & Widgets)
+      if(layoutUnsub) layoutUnsub();
+      layoutUnsub = onSnapshot(doc(db, basePath, "config"), (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if(data.tabs) tabs = data.tabs;
+          if(data.widgets) widgets = data.widgets;
+        }
+        window.renderTabs(); window.renderWidgets();
+      });
+
+      listenToDevice();
+    }
+
+    function listenToDevice() {
+      if(deviceUnsub) deviceUnsub();
+      // Listen for Live Hardware Data updates instantly!
+      deviceUnsub = onSnapshot(doc(db, getBasePath() + "/devices", currentDevice), (docSnap) => {
+        if (docSnap.exists()) {
+          pinsData = docSnap.data();
+        } else {
+          pinsData = {};
+        }
+        
+        const statusEl = document.getElementById('status');
+        let isOffline = (!pinsData.last_ping || (Date.now() - parseInt(pinsData.last_ping) > 15000));
+        statusEl.className = isOffline ? "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/30" : "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
+        statusEl.innerHTML = isOffline ? '<i class="fa-solid fa-triangle-exclamation"></i> Offline' : '<i class="fa-solid fa-bolt"></i> Realtime Sync';
+
+        if(!isEditMode) updateUI();
+      });
+    }
+
+    window.changeDevice = () => { currentDevice = document.getElementById('device-selector').value; listenToDevice(); };
+
+    async function saveLayoutToCloud() {
+      await setDoc(doc(db, getBasePath(), "config"), { tabs: tabs, widgets: widgets }, { merge: true });
+    }
+
+    // --- UI LOGIC ---
+    window.tryEditMode = () => {
+      if (!isEditMode) { let pin = prompt("Enter Admin PIN to edit (Hint: 1234):"); if (pin !== ADMIN_PIN) { alert("Incorrect PIN."); return; } }
+      isEditMode = !isEditMode;
+      document.getElementById('edit-toolbar').classList.toggle('hidden');
+      let btn = document.getElementById('edit-btn');
+      if(isEditMode) { btn.innerHTML = '<i class="fa-solid fa-lock-open"></i> Done Editing'; btn.className = "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-emerald-500 text-slate-900 shadow-lg"; } 
+      else { btn.innerHTML = '<i class="fa-solid fa-lock"></i> Edit'; btn.className = "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700"; }
+      window.renderTabs(); window.renderWidgets();
+    };
+
+    window.renderTabs = () => {
+      let html = '';
+      tabs.forEach(t => {
+        let activeClass = (t.id === activeTab) ? 'text-indigo-400 border-indigo-400 border-b-2' : 'text-slate-500 hover:text-slate-300 border-transparent border-b-2 hover:border-slate-600';
+        html += `<div class="px-4 py-2 font-bold text-sm cursor-pointer whitespace-nowrap transition-all ${activeClass}" onclick="window.switchTab('${t.id}')">${t.name}</div>`;
+      });
+      if(isEditMode) html += `<div class="px-3 py-2 text-slate-500 hover:text-white cursor-pointer" onclick="window.addTab()"><i class="fa-solid fa-plus"></i></div>`;
+      document.getElementById('tab-bar').innerHTML = html;
+    };
+    
+    window.switchTab = (id) => { activeTab = id; window.renderTabs(); window.renderWidgets(); };
+    window.addTab = () => { let name = prompt("New Tab Name:"); if(name) { tabs.push({id: 'tab_'+Date.now(), name}); saveLayoutToCloud(); } };
+
+    window.addWidget = (type) => { widgets.push({ id: 'w_' + Date.now(), type: type, pin: 'V0', label: `New ${type}`, tabId: activeTab }); saveLayoutToCloud(); };
+    window.deleteWidget = (id) => { if(confirm("Delete widget?")) { widgets = widgets.filter(w => w.id !== id); saveLayoutToCloud(); } };
+    window.openSettings = (id) => {
+      let w = widgets.find(w => w.id === id);
+      document.getElementById('edit-id').value = w.id; document.getElementById('edit-label').value = w.label; document.getElementById('edit-pin').value = w.pin;
+      document.getElementById('settings-modal').classList.remove('hidden');
+    };
+    window.closeSettings = () => document.getElementById('settings-modal').classList.add('hidden');
+    window.saveSettings = () => {
+      let id = document.getElementById('edit-id').value; let w = widgets.find(w => w.id === id);
+      w.label = document.getElementById('edit-label').value; w.pin = document.getElementById('edit-pin').value;
+      saveLayoutToCloud(); window.closeSettings();
+    };
+
+    window.renderWidgets = () => {
+      const grid = document.getElementById('widget-grid');
+      Object.values(charts).forEach(c => c.destroy()); charts = {}; grid.innerHTML = '';
+      
+      let tabWidgets = widgets.filter(w => w.tabId === activeTab);
+
+      tabWidgets.forEach(w => {
+        const div = document.createElement('div');
+        div.className = "bg-slate-900 border border-slate-800 rounded-2xl shadow-xl flex flex-col relative overflow-hidden h-48 group transition-all";
+        if(isEditMode) div.classList.add('border-dashed', 'border-slate-600');
+
+        let val = pinsData[w.pin] || '0'; 
+        let contentHTML = '';
+
+        if (w.type === 'display') contentHTML = `<div class="flex-1 flex flex-col items-center justify-center p-4"><div class="text-5xl font-bold text-cyan-400" id="val-${w.id}">${val}</div></div>`;
+        else if (w.type === 'gauge') contentHTML = `<div class="flex-1 w-full p-2 relative"><canvas id="canvas-${w.id}"></canvas><div class="absolute inset-0 flex items-end pb-4 justify-center text-3xl font-bold text-orange-400 pointer-events-none" id="val-${w.id}">${val}</div></div>`;
+        else if (w.type === 'button') { let isOn = val == 1; contentHTML = `<div class="flex-1 flex items-center justify-center p-4"><button onclick="window.togglePin('${w.pin}')" id="btn-${w.id}" disabled="${isEditMode}" class="w-24 h-24 rounded-full border-4 flex items-center justify-center text-2xl transition-all ${isOn ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/20' : 'bg-slate-800 border-slate-700 text-slate-500'} ${isEditMode ? 'opacity-50' : ''}"><i class="fa-solid fa-power-off"></i></button></div>`; }
+        else if (w.type === 'slider') contentHTML = `<div class="flex-1 flex flex-col justify-center px-6 gap-4"><div class="text-right text-2xl font-bold text-indigo-400" id="val-${w.id}">${val}</div><input type="range" min="0" max="255" value="${val}" id="slider-${w.id}" ${isEditMode ? 'disabled' : ''} onchange="window.sendValue('${w.pin}', this.value)" class="w-full accent-indigo-500"></div>`;
+
+        let editOverlay = isEditMode ? `<div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center gap-4 z-10"><button onclick="window.openSettings('${w.id}')" class="bg-indigo-600 text-white w-10 h-10 rounded-full hover:scale-110"><i class="fa-solid fa-gear"></i></button><button onclick="window.deleteWidget('${w.id}')" class="bg-red-600 text-white w-10 h-10 rounded-full hover:scale-110"><i class="fa-solid fa-trash"></i></button></div>` : '';
+
+        div.innerHTML = `<div class="bg-slate-800/50 px-4 py-2 border-b border-slate-800 flex justify-between items-center"><span class="font-bold text-slate-300 text-xs uppercase" id="title-${w.id}">${w.label}</span><span class="text-[10px] font-bold text-indigo-400 font-mono">${w.pin}</span></div>${contentHTML}${editOverlay}`;
+        grid.appendChild(div);
+
+        if (w.type === 'gauge') charts[w.id] = new Chart(document.getElementById(`canvas-${w.id}`), { type: 'doughnut', data: { datasets: [{ data: [parseFloat(val)||0, 100-(parseFloat(val)||0)], backgroundColor: ['#f97316', '#1e293b'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, circumference: 180, rotation: -90, cutout: '80%', animation: false, plugins: { tooltip: { enabled: false } } } });
+      });
+    };
+
+    // --- HARDWARE CONTROL ---
+    window.togglePin = (pin) => { if(isEditMode) return; let n = (pinsData[pin] == 1) ? 0 : 1; window.sendValue(pin, n); };
+    
+    window.sendValue = async (pin, val) => {
+      if(isEditMode || !currentUser) return; 
+      pinsData[pin] = val; updateUI(); // Update instantly on screen
+      // Send instantly to Google Firestore!
+      await setDoc(doc(db, getBasePath() + "/devices", currentDevice), { [pin]: val }, { merge: true });
+    };
+
+    function updateUI() {
+      widgets.filter(w => w.tabId === activeTab).forEach(w => {
+        let val = pinsData[w.pin] || '0';
+        let el = document.getElementById(`val-${w.id}`);
+        
+        if(w.type === 'display') { if(el) el.innerText = val; }
+        else if (w.type === 'button') { let btn = document.getElementById(`btn-${w.id}`); if(btn) btn.className = (val == 1) ? "w-24 h-24 rounded-full border-4 flex items-center justify-center text-2xl transition-all bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/20" : "w-24 h-24 rounded-full border-4 flex items-center justify-center text-2xl transition-all bg-slate-800 border-slate-700 text-slate-500"; }
+        else if (w.type === 'slider') { let slider = document.getElementById(`slider-${w.id}`); if(slider && document.activeElement !== slider) { slider.value = val; if(el) el.innerText = val; } }
+        else if (w.type === 'gauge' && charts[w.id]) {
+          let num = parseFloat(val)||0; charts[w.id].data.datasets[0].data = [num, Math.max(0, 100-num)];
+          charts[w.id].update(); if(el) el.innerText = num;
+        }
+      });
+    }
+
+    // Auto-login if we are in the Preview Environment (to help you test)
+    if (typeof __initial_auth_token !== 'undefined') {
+       import("https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js").then(m => {
+           if(__initial_auth_token) m.signInWithCustomToken(auth, __initial_auth_token);
+           else m.signInAnonymously(auth);
+       });
+    }
+
+  </script>
+</body>
+</html>
