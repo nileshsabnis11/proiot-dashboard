@@ -140,7 +140,7 @@
         <div class="p-6 space-y-4">
           <input type="hidden" id="edit-id">
           <div><label class="block text-xs font-bold text-slate-400 uppercase mb-2">Title</label><input type="text" id="edit-label" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-white outline-none focus:border-indigo-500"></div>
-          <div><label class="block text-xs font-bold text-slate-400 uppercase mb-2">Virtual Pin</label><select id="edit-pin" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-white font-mono outline-none focus:border-indigo-500"><option value="V0">V0</option><option value="V1">V1</option><option value="V2">V2</option><option value="V3">V3</option><option value="V4">V4</option><option value="V5">V5</option></select></div>
+          <div><label class="block text-xs font-bold text-slate-400 uppercase mb-2">Virtual Pin</label><select id="edit-pin" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-white font-mono outline-none focus:border-indigo-500"><option value="V0">V0</option><option value="V1">V1</option><option value="V2">V2</option><option value="V3">V3</option><option value="V4">V4</option><option value="V5">V5</option><option value="V6">V6</option><option value="V7">V7</option><option value="V8">V8</option><option value="V9">V9</option><option value="V10">V10</option></select></div>
         </div>
         <div class="p-4 border-t border-slate-700 flex justify-end gap-3"><button onclick="window.closeSettings()" class="text-slate-400 hover:text-white text-sm font-bold">Cancel</button><button onclick="window.saveSettings()" class="px-6 py-2 bg-indigo-600 rounded-lg text-white font-bold">Save</button></div>
       </div>
@@ -153,7 +153,7 @@
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// 🔴🔴🔴 YOUR FIREBASE CONFIGURATION GOES HERE 🔴🔴🔴
+    // 🔴🔴🔴 YOUR FIREBASE CONFIGURATION GOES HERE 🔴🔴🔴
     // Once you create a Firebase project, paste your keys here:
     let firebaseConfig = {
       apiKey: "AIzaSyBgtQk5LkanpROvrfNz6pWqFlh6ie14LFA",
@@ -319,7 +319,16 @@
     window.switchTab = (id) => { activeTab = id; window.renderTabs(); window.renderWidgets(); };
     window.addTab = () => { let name = prompt("New Tab Name:"); if(name) { tabs.push({id: 'tab_'+Date.now(), name}); saveLayoutToCloud(); } };
 
-    window.addWidget = (type) => { widgets.push({ id: 'w_' + Date.now(), type: type, pin: 'V0', label: `New ${type}`, tabId: activeTab }); saveLayoutToCloud(); };
+    window.addWidget = (type) => { 
+      let usedPins = widgets.map(w => w.pin);
+      let freePin = 'V0';
+      for(let i=0; i<=10; i++) {
+        if(!usedPins.includes(`V${i}`)) { freePin = `V${i}`; break; }
+      }
+      widgets.push({ id: 'w_' + Date.now(), type: type, pin: freePin, label: `New ${type}`, tabId: activeTab }); 
+      saveLayoutToCloud(); 
+      window.renderWidgets();
+    };
     window.deleteWidget = (id) => { if(confirm("Delete widget?")) { widgets = widgets.filter(w => w.id !== id); saveLayoutToCloud(); } };
     window.openSettings = (id) => {
       let w = widgets.find(w => w.id === id);
