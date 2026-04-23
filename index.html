@@ -92,7 +92,6 @@
           <button onclick="window.copyApiKey()" id="copy-btn" class="ml-1 text-slate-400 hover:text-white transition-colors" title="Copy to Clipboard"><i class="fa-solid fa-copy"></i></button>
         </div>
 
-        <!-- DYNAMIC DEVICE MANAGER (Clarified the default name) -->
         <div class="flex items-center bg-slate-800 rounded-lg border border-slate-700 p-1 flex-shrink-0">
           <select id="device-selector" onchange="window.changeDevice()" class="bg-slate-900 text-white text-sm font-semibold rounded-l px-2 py-1 outline-none border-none min-w-[120px] max-w-[200px] truncate">
             <option value="BoardA">BoardA (Main Node)</option>
@@ -152,13 +151,13 @@
     </div>
   </div>
 
-  <!-- FIREBASE MODULES -->
+  <!-- REALTIME DATABASE MODULES (Switched from Firestore) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-// 🔴🔴🔴 YOUR FIREBASE CONFIGURATION GOES HERE 🔴🔴🔴
+  // 🔴🔴🔴 YOUR FIREBASE CONFIGURATION GOES HERE 🔴🔴🔴
     // Once you create a Firebase project, paste your keys here:
     let firebaseConfig = {
       apiKey: "AIzaSyBgtQk5LkanpROvrfNz6pWqFlh6ie14LFA",
@@ -168,13 +167,21 @@
       messagingSenderId: "869841023673",
       appId: "1:869841023673:web:280eed0fdbd4117e78e168"
     };
-    
 
-    if (typeof __firebase_config !== 'undefined') firebaseConfig = JSON.parse(__firebase_config);
+
+    // Auto-generate Realtime Database URL if missing
+    if (!firebaseConfig.databaseURL) {
+      firebaseConfig.databaseURL = `https://${firebaseConfig.projectId}-default-rtdb.firebaseio.com`;
+    }
+
+    if (typeof __firebase_config !== 'undefined') {
+      firebaseConfig = JSON.parse(__firebase_config);
+      if (!firebaseConfig.databaseURL) firebaseConfig.databaseURL = `https://${firebaseConfig.projectId}-default-rtdb.firebaseio.com`;
+    }
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
+    const db = getDatabase(app);
 
     const ADMIN_PIN = "1234";
     let currentUser = null;
@@ -186,7 +193,7 @@
     let activeTab = "tab_1";
     let tabs = [{id: 'tab_1', name: 'Main Workspace'}];
     
-    // DEFAULT WIDGETS UPDATED FOR DHT11 SENSOR
+    // DEFAULT DHT11 WIDGETS
     let widgets = [
       { id: 'w_1', type: 'display', pin: 'V0', label: 'Temperature (°C)', tabId: 'tab_1' },
       { id: 'w_2', type: 'display', pin: 'V1', label: 'Humidity (%)', tabId: 'tab_1' }
@@ -199,13 +206,12 @@
 
     let layoutUnsub = null;
     let deviceUnsub = null;
-    
     let lastPingTime = 0;
     let lastPingValue = "";
 
     function getBasePath() {
       if (!currentUser) return "";
-      return typeof __app_id !== 'undefined' ? `artifacts/${__app_id}/users/${currentUser.uid}` : `users/${currentUser.uid}`;
+      return `users/${currentUser.uid}`;
     }
 
     // --- AUTH LOGIC ---
@@ -238,29 +244,23 @@
     function showError(msg) { const el = document.getElementById('auth-error'); el.innerText = msg; el.classList.remove('hidden'); }
 
     // --- COPY API KEY LOGIC ---
-    window.toggleApiKey = () => {
-      apiKeyVisible = !apiKeyVisible;
-      document.getElementById('display-apikey').classList.toggle('blur-md');
-      document.getElementById('eye-icon').innerHTML = apiKeyVisible ? '<i class="fa-solid fa-eye-slash text-white text-xs"></i>' : '<i class="fa-solid fa-eye text-white text-xs"></i>';
-    };
+    window.toggleApiKey = () => { apiKeyVisible = !apiKeyVisible; document.getElementById('display-apikey').classList.toggle('blur-md'); document.getElementById('eye-icon').innerHTML = apiKeyVisible ? '<i class="fa-solid fa-eye-slash text-white text-xs"></i>' : '<i class="fa-solid fa-eye text-white text-xs"></i>'; };
     window.copyApiKey = () => {
       if (!currentUser) return;
       const btn = document.getElementById('copy-btn');
       try { navigator.clipboard.writeText(currentUser.uid).then(() => showCopied(btn)); } 
-      catch (err) {
-        const textArea = document.createElement("textarea"); textArea.value = currentUser.uid; document.body.appendChild(textArea); textArea.select();
-        document.execCommand("copy"); document.body.removeChild(textArea); showCopied(btn);
-      }
+      catch (err) { const textArea = document.createElement("textarea"); textArea.value = currentUser.uid; document.body.appendChild(textArea); textArea.select(); document.execCommand("copy"); document.body.removeChild(textArea); showCopied(btn); }
     };
     function showCopied(btn) { const originalHTML = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i>'; setTimeout(() => { btn.innerHTML = originalHTML; }, 2000); }
 
-    // --- REALTIME CLOUD SYNC ---
+    // --- REALTIME CLOUD SYNC (Using Realtime Database) ---
     function loadCloudData() {
       if(layoutUnsub) layoutUnsub();
       
-      layoutUnsub = onSnapshot(doc(db, getBasePath() + "/dashboard", "config"), (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
+      const configRef = ref(db, getBasePath() + '/dashboard/config');
+      layoutUnsub = onValue(configRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
           if(data.tabs) tabs = data.tabs;
           if(data.widgets) widgets = data.widgets;
           if(data.devices && data.devices.length > 0) userDevices = data.devices; 
@@ -268,13 +268,7 @@
         window.renderDeviceList();
         window.renderTabs(); 
         window.renderWidgets();
-      }, (error) => {
-        // ALERT USER IF FIREBASE RULES BLOCK THEM
-        if (error.message.includes("permission") || error.message.includes("Missing or insufficient")) {
-           alert("FIREBASE SECURITY WARNING: Your Database Rules are blocking access (they may have expired after 30 days). Please go to Firebase -> Firestore -> Rules, and change them to allow read/write!");
-        }
       });
-      
       listenToDevice();
     }
 
@@ -293,14 +287,11 @@
     window.addNewDevice = () => {
       let name = prompt("Enter a name for the new Arduino Board (e.g., Garden Node):");
       if (!name) return;
-      
       let uniqueID = "DEV_" + Math.random().toString(36).substr(2, 5).toUpperCase();
       userDevices.push({ id: uniqueID, name: name + " (" + uniqueID + ")" });
-      
       currentDevice = uniqueID; 
       saveLayoutToCloud();
       listenToDevice();
-      
       alert(`Success! Your new Device ID for the Arduino code is: ${uniqueID}\n\nYou can also see it in the dropdown menu.`);
     };
 
@@ -310,10 +301,11 @@
       if(deviceUnsub) deviceUnsub();
       historyData = {}; 
       
-      deviceUnsub = onSnapshot(doc(db, getBasePath() + "/devices", currentDevice), (docSnap) => {
-        if (docSnap.exists()) {
-          pinsData = docSnap.data();
-          
+      const deviceRef = ref(db, getBasePath() + '/devices/' + currentDevice);
+      deviceUnsub = onValue(deviceRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          pinsData = data;
           if (pinsData.last_ping !== lastPingValue) {
             lastPingValue = pinsData.last_ping;
             lastPingTime = Date.now();
@@ -331,7 +323,6 @@
             if(historyData[w.pin].length > 50) historyData[w.pin].shift();
           }
         });
-
         if(!isEditMode) updateUI();
       });
     }
@@ -341,14 +332,13 @@
       const statusEl = document.getElementById('status');
       if (!statusEl) return;
       let isOffline = (!lastPingTime || (Date.now() - lastPingTime > 15000));
-      
       statusEl.className = isOffline ? "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/30" : "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
       statusEl.innerHTML = isOffline ? '<i class="fa-solid fa-triangle-exclamation"></i> Offline' : '<i class="fa-solid fa-bolt"></i> Realtime Sync';
     }, 2000);
 
     async function saveLayoutToCloud() { 
       try {
-        await setDoc(doc(db, getBasePath() + "/dashboard", "config"), { tabs: tabs, widgets: widgets, devices: userDevices }, { merge: true }); 
+        await set(ref(db, getBasePath() + '/dashboard/config'), { tabs: tabs, widgets: widgets, devices: userDevices });
       } catch (err) {
         alert("Failed to save layout to Firebase: " + err.message);
       }
@@ -436,13 +426,10 @@
     
     window.sendValue = async (pin, val) => {
       if(isEditMode || !currentUser) return; 
-      pinsData[pin] = val; 
-      updateUI(); 
+      pinsData[pin] = val; updateUI(); 
       try {
-        await setDoc(doc(db, getBasePath() + "/devices", currentDevice), { [pin]: val }, { merge: true });
-      } catch (err) {
-        alert("Action blocked by Firebase Rules. Make sure your database is in Test Mode.");
-      }
+        await update(ref(db, getBasePath() + '/devices/' + currentDevice), { [pin]: val });
+      } catch (err) { alert("Action blocked. Ensure Database Rules are open."); }
     };
 
     function updateUI() {
@@ -474,13 +461,12 @@
       let blob = new Blob([csv], {type: 'text/csv'}); let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${currentDevice}_Data.csv`; a.click();
     };
 
-    // Initialize Firebase Auth Preview Fallback
+    // Auto-login if we are in the Canvas preview (to help test)
     if (typeof __initial_auth_token !== 'undefined') {
        import("https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js").then(m => {
            if(__initial_auth_token) m.signInWithCustomToken(auth, __initial_auth_token); else m.signInAnonymously(auth);
        });
     }
-
   </script>
 </body>
 </html>
