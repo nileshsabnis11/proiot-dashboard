@@ -80,7 +80,7 @@
       </div>
       
       <div class="flex items-center gap-4 flex-wrap mt-4 md:mt-0">
-        <!-- API KEY SECTION WITH COPY BUTTON -->
+        <!-- API KEY -->
         <div class="flex items-center bg-indigo-500/10 border border-indigo-500/30 rounded-lg p-1 px-3">
           <i class="fa-solid fa-key text-indigo-400 mr-2 text-sm"></i>
           <span class="text-xs font-bold text-slate-300 mr-2">API KEY:</span>
@@ -88,31 +88,24 @@
             <code id="display-apikey" class="text-sm font-bold text-indigo-400 tracking-wider blur-md transition-all select-none">AK_LOADING</code>
             <div id="eye-icon" class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-indigo-900/80 rounded"><i class="fa-solid fa-eye text-white text-xs"></i></div>
           </div>
-          <!-- NEW COPY BUTTON -->
-          <button onclick="window.copyApiKey()" id="copy-btn" class="ml-1 text-slate-400 hover:text-white transition-colors" title="Copy to Clipboard">
-            <i class="fa-solid fa-copy"></i>
-          </button>
+          <button onclick="window.copyApiKey()" id="copy-btn" class="ml-1 text-slate-400 hover:text-white transition-colors" title="Copy to Clipboard"><i class="fa-solid fa-copy"></i></button>
         </div>
 
-        <div class="flex items-center bg-slate-800 rounded-lg border border-slate-700 p-1">
-          <select id="device-selector" onchange="window.changeDevice()" class="bg-slate-900 text-white text-sm font-semibold rounded px-2 py-1 outline-none border border-slate-700">
-            <option value="BoardA">Board A (Main)</option><option value="BoardB">Board B (Garden)</option>
+        <!-- NEW: DYNAMIC DEVICE MANAGER -->
+        <div class="flex items-center bg-slate-800 rounded-lg border border-slate-700 p-1 flex-shrink-0">
+          <select id="device-selector" onchange="window.changeDevice()" class="bg-slate-900 text-white text-sm font-semibold rounded-l px-2 py-1 outline-none border-none">
+            <!-- Populated dynamically -->
           </select>
+          <button onclick="window.addNewDevice()" class="px-3 border-l border-slate-600 text-indigo-400 hover:text-indigo-300 font-bold text-sm" title="Add New Hardware Device"><i class="fa-solid fa-plus"></i></button>
         </div>
         
-        <!-- RESTORED CSV EXPORT BUTTON -->
-        <button onclick="window.exportCSV()" class="text-slate-400 hover:text-indigo-400 transition-colors bg-slate-800 p-2 rounded-lg border border-slate-700 flex items-center gap-2 text-sm font-bold" title="Download Data CSV">
-          <i class="fa-solid fa-download"></i> <span class="hidden lg:inline">CSV</span>
-        </button>
-
+        <button onclick="window.exportCSV()" class="text-slate-400 hover:text-indigo-400 transition-colors bg-slate-800 p-2 rounded-lg border border-slate-700 flex items-center gap-2 text-sm font-bold" title="Download Data CSV"><i class="fa-solid fa-download"></i> <span class="hidden lg:inline">CSV</span></button>
         <div id="status" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700"><i class="fa-solid fa-bolt"></i> Offline</div>
-        
         <button onclick="window.tryEditMode()" id="edit-btn" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700"><i class="fa-solid fa-lock"></i> Edit</button>
         <button onclick="window.logout()" class="text-slate-500 hover:text-red-400 transition-colors ml-2" title="Logout"><i class="fa-solid fa-right-from-bracket text-lg"></i></button>
       </div>
     </header>
 
-    <!-- Edit Toolbar (ALL WIDGETS RESTORED) -->
     <div id="edit-toolbar" class="hidden bg-slate-800 border-b border-slate-700 p-4 shadow-inner">
       <div class="max-w-6xl mx-auto flex flex-wrap gap-2 items-center">
         <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2">Widgets:</span>
@@ -140,9 +133,20 @@
         <div class="p-6 space-y-4">
           <input type="hidden" id="edit-id">
           <div><label class="block text-xs font-bold text-slate-400 uppercase mb-2">Title</label><input type="text" id="edit-label" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-white outline-none focus:border-indigo-500"></div>
-          <div><label class="block text-xs font-bold text-slate-400 uppercase mb-2">Virtual Pin</label><select id="edit-pin" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-white font-mono outline-none focus:border-indigo-500"><option value="V0">V0</option><option value="V1">V1</option><option value="V2">V2</option><option value="V3">V3</option><option value="V4">V4</option><option value="V5">V5</option><option value="V6">V6</option><option value="V7">V7</option><option value="V8">V8</option><option value="V9">V9</option><option value="V10">V10</option></select></div>
+          <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Virtual Pin</label>
+            <select id="edit-pin" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-white font-mono outline-none focus:border-indigo-500">
+              <option value="V0">V0</option><option value="V1">V1</option><option value="V2">V2</option>
+              <option value="V3">V3</option><option value="V4">V4</option><option value="V5">V5</option>
+              <option value="V6">V6</option><option value="V7">V7</option><option value="V8">V8</option>
+              <option value="V9">V9</option><option value="V10">V10</option>
+            </select>
+          </div>
         </div>
-        <div class="p-4 border-t border-slate-700 flex justify-end gap-3"><button onclick="window.closeSettings()" class="text-slate-400 hover:text-white text-sm font-bold">Cancel</button><button onclick="window.saveSettings()" class="px-6 py-2 bg-indigo-600 rounded-lg text-white font-bold">Save</button></div>
+        <div class="p-4 border-t border-slate-700 flex justify-end gap-3">
+          <button onclick="window.closeSettings()" class="text-slate-400 hover:text-white text-sm font-bold">Cancel</button>
+          <button onclick="window.saveSettings()" class="px-6 py-2 bg-indigo-600 rounded-lg text-white font-bold">Save</button>
+        </div>
       </div>
     </div>
   </div>
@@ -153,7 +157,7 @@
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-    // 🔴🔴🔴 YOUR FIREBASE CONFIGURATION GOES HERE 🔴🔴🔴
+   // 🔴🔴🔴 YOUR FIREBASE CONFIGURATION GOES HERE 🔴🔴🔴
     // Once you create a Firebase project, paste your keys here:
     let firebaseConfig = {
       apiKey: "AIzaSyBgtQk5LkanpROvrfNz6pWqFlh6ie14LFA",
@@ -175,12 +179,15 @@
     let currentUser = null;
     let apiKeyVisible = false;
     
+    // NEW: Dynamic Devices Array
+    let userDevices = [{ id: 'BoardA', name: 'Main Board' }];
+    let currentDevice = "BoardA";
+
     let activeTab = "tab_1";
     let tabs = [{id: 'tab_1', name: 'Main Workspace'}];
     let widgets = [{ id: 'w_1', type: 'display', pin: 'V0', label: 'Moisture', tabId: 'tab_1' }];
-    let currentDevice = "BoardA";
     let pinsData = {}; 
-    let historyData = {}; // Stores historical data for Charts and CSV
+    let historyData = {}; 
     let isEditMode = false;
     let charts = {}; 
 
@@ -225,28 +232,16 @@
       document.getElementById('display-apikey').classList.toggle('blur-md');
       document.getElementById('eye-icon').innerHTML = apiKeyVisible ? '<i class="fa-solid fa-eye-slash text-white text-xs"></i>' : '<i class="fa-solid fa-eye text-white text-xs"></i>';
     };
-
     window.copyApiKey = () => {
       if (!currentUser) return;
-      const key = currentUser.uid;
       const btn = document.getElementById('copy-btn');
-      
-      // Attempt to copy using modern clipboard API or fallback
-      try {
-        navigator.clipboard.writeText(key).then(() => showCopied(btn));
-      } catch (err) {
-        const textArea = document.createElement("textarea");
-        textArea.value = key; document.body.appendChild(textArea); textArea.select();
-        document.execCommand("copy"); document.body.removeChild(textArea);
-        showCopied(btn);
+      try { navigator.clipboard.writeText(currentUser.uid).then(() => showCopied(btn)); } 
+      catch (err) {
+        const textArea = document.createElement("textarea"); textArea.value = currentUser.uid; document.body.appendChild(textArea); textArea.select();
+        document.execCommand("copy"); document.body.removeChild(textArea); showCopied(btn);
       }
     };
-
-    function showCopied(btn) {
-      const originalHTML = btn.innerHTML;
-      btn.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i>';
-      setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
-    }
+    function showCopied(btn) { const originalHTML = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i>'; setTimeout(() => { btn.innerHTML = originalHTML; }, 2000); }
 
     // --- REALTIME CLOUD SYNC ---
     function loadCloudData() {
@@ -256,15 +251,47 @@
           const data = docSnap.data();
           if(data.tabs) tabs = data.tabs;
           if(data.widgets) widgets = data.widgets;
+          if(data.devices) userDevices = data.devices; // Load dynamic devices
         }
-        window.renderTabs(); window.renderWidgets();
+        window.renderDeviceList();
+        window.renderTabs(); 
+        window.renderWidgets();
       });
       listenToDevice();
     }
 
+    // --- DYNAMIC DEVICE MANAGEMENT ---
+    window.renderDeviceList = () => {
+      const sel = document.getElementById('device-selector');
+      sel.innerHTML = '';
+      userDevices.forEach(dev => {
+        let opt = document.createElement('option');
+        opt.value = dev.id; opt.innerText = dev.name;
+        sel.appendChild(opt);
+      });
+      sel.value = currentDevice; // keep current selection
+    };
+
+    window.addNewDevice = () => {
+      let name = prompt("Enter a name for the new Arduino Board (e.g., Garden Node):");
+      if (!name) return;
+      
+      // Generate a unique 6-character Device ID (e.g., DEV_X9F2A)
+      let uniqueID = "DEV_" + Math.random().toString(36).substr(2, 5).toUpperCase();
+      userDevices.push({ id: uniqueID, name: name + " (" + uniqueID + ")" });
+      
+      currentDevice = uniqueID; // Switch to it immediately
+      saveLayoutToCloud();
+      listenToDevice();
+      
+      alert(`Success! Your new Device ID for the Arduino code is: ${uniqueID}\n\nYou can also see it in the dropdown menu.`);
+    };
+
+    window.changeDevice = () => { currentDevice = document.getElementById('device-selector').value; listenToDevice(); };
+
     function listenToDevice() {
       if(deviceUnsub) deviceUnsub();
-      historyData = {}; // Clear graph data on device switch
+      historyData = {}; 
       
       deviceUnsub = onSnapshot(doc(db, getBasePath() + "/devices", currentDevice), (docSnap) => {
         if (docSnap.exists()) pinsData = docSnap.data();
@@ -275,16 +302,13 @@
         statusEl.className = isOffline ? "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/30" : "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
         statusEl.innerHTML = isOffline ? '<i class="fa-solid fa-triangle-exclamation"></i> Offline' : '<i class="fa-solid fa-bolt"></i> Realtime Sync';
 
-        // Track History for Graphs and CSV
         let now = new Date().toLocaleTimeString();
         widgets.forEach(w => {
           let val = pinsData[w.pin] || 0;
           if(!historyData[w.pin]) historyData[w.pin] = [];
-          
-          // Only track numerical data for graphs
           if (!isNaN(parseFloat(val))) {
             historyData[w.pin].push({time: now, val: parseFloat(val)});
-            if(historyData[w.pin].length > 50) historyData[w.pin].shift(); // Keep last 50 points
+            if(historyData[w.pin].length > 50) historyData[w.pin].shift();
           }
         });
 
@@ -292,8 +316,7 @@
       });
     }
 
-    window.changeDevice = () => { currentDevice = document.getElementById('device-selector').value; listenToDevice(); };
-    async function saveLayoutToCloud() { await setDoc(doc(db, getBasePath(), "config"), { tabs: tabs, widgets: widgets }, { merge: true }); }
+    async function saveLayoutToCloud() { await setDoc(doc(db, getBasePath(), "config"), { tabs: tabs, widgets: widgets, devices: userDevices }, { merge: true }); }
 
     // --- UI LOGIC ---
     window.tryEditMode = () => {
@@ -320,14 +343,11 @@
     window.addTab = () => { let name = prompt("New Tab Name:"); if(name) { tabs.push({id: 'tab_'+Date.now(), name}); saveLayoutToCloud(); } };
 
     window.addWidget = (type) => { 
-      let usedPins = widgets.map(w => w.pin);
+      let usedPins = widgets.filter(w => w.tabId === activeTab).map(w => w.pin);
       let freePin = 'V0';
-      for(let i=0; i<=10; i++) {
-        if(!usedPins.includes(`V${i}`)) { freePin = `V${i}`; break; }
-      }
+      for(let i=0; i<=10; i++) { if(!usedPins.includes(`V${i}`)) { freePin = `V${i}`; break; } }
       widgets.push({ id: 'w_' + Date.now(), type: type, pin: freePin, label: `New ${type}`, tabId: activeTab }); 
-      saveLayoutToCloud(); 
-      window.renderWidgets();
+      saveLayoutToCloud(); window.renderWidgets();
     };
     window.deleteWidget = (id) => { if(confirm("Delete widget?")) { widgets = widgets.filter(w => w.id !== id); saveLayoutToCloud(); } };
     window.openSettings = (id) => {
@@ -370,18 +390,20 @@
         div.innerHTML = `<div class="bg-slate-800/50 px-4 py-2 border-b border-slate-800 flex justify-between items-center"><span class="font-bold text-slate-300 text-xs uppercase" id="title-${w.id}">${w.label}</span><span class="text-[10px] font-bold text-indigo-400 font-mono">${w.pin}</span></div>${contentHTML}${editOverlay}`;
         grid.appendChild(div);
 
-        // Init Chart JS
         if (w.type === 'graph') charts[w.id] = new Chart(document.getElementById(`canvas-${w.id}`), { type: 'line', data: { labels: [], datasets: [{ label: w.label, data: [], borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.1)', fill: true, tension: 0.4, pointRadius: 0 }] }, options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: true } } } });
         if (w.type === 'gauge') charts[w.id] = new Chart(document.getElementById(`canvas-${w.id}`), { type: 'doughnut', data: { datasets: [{ data: [parseFloat(val)||0, 100-(parseFloat(val)||0)], backgroundColor: ['#f97316', '#1e293b'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, circumference: 180, rotation: -90, cutout: '80%', animation: false, plugins: { tooltip: { enabled: false } } } });
       });
     };
 
-    // --- HARDWARE CONTROL ---
+    // --- TWO WAY HARDWARE CONTROL ---
     window.togglePin = (pin) => { if(isEditMode) return; let n = (pinsData[pin] == 1) ? 0 : 1; window.sendValue(pin, n); };
     
     window.sendValue = async (pin, val) => {
       if(isEditMode || !currentUser) return; 
-      pinsData[pin] = val; updateUI(); 
+      pinsData[pin] = val; 
+      updateUI(); // Instant Visual Feedback
+      
+      // Push the manual override command directly to Firebase
       await setDoc(doc(db, getBasePath() + "/devices", currentDevice), { [pin]: val }, { merge: true });
     };
 
@@ -409,20 +431,15 @@
     // --- CSV EXPORT ---
     window.exportCSV = () => {
       let csv = "Device,Time,Pin,Value\n";
-      for(let pin in historyData) {
-        historyData[pin].forEach(pt => { csv += `${currentDevice},${pt.time},${pin},${pt.val}\n`; });
-      }
+      for(let pin in historyData) { historyData[pin].forEach(pt => { csv += `${currentDevice},${pt.time},${pin},${pt.val}\n`; }); }
       if(csv === "Device,Time,Pin,Value\n") { alert("No data recorded yet. Let the dashboard run for a few seconds first."); return; }
-      
-      let blob = new Blob([csv], {type: 'text/csv'});
-      let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${currentDevice}_Data.csv`; a.click();
+      let blob = new Blob([csv], {type: 'text/csv'}); let a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${currentDevice}_Data.csv`; a.click();
     };
 
     // Initialize Firebase Auth Preview Fallback
     if (typeof __initial_auth_token !== 'undefined') {
        import("https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js").then(m => {
-           if(__initial_auth_token) m.signInWithCustomToken(auth, __initial_auth_token);
-           else m.signInAnonymously(auth);
+           if(__initial_auth_token) m.signInWithCustomToken(auth, __initial_auth_token); else m.signInAnonymously(auth);
        });
     }
 
