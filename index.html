@@ -75,7 +75,8 @@
         <div class="bg-gradient-to-br from-indigo-500 to-blue-600 p-2 rounded-xl"><i class="fa-solid fa-cloud-bolt text-xl text-white"></i></div>
         <div>
           <h1 class="text-xl font-bold text-white tracking-tight">ProIoT Workspace</h1>
-          <div class="flex items-center gap-2 mt-0.5"><span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider bg-slate-800 px-1.5 py-0.5 rounded">Account: <span id="display-email" class="text-white lowercase"></span></span></div>
+          <div class="text-[10px] font-bold text-indigo-400/80 mt-0.5 tracking-widest"> &copy; 2026 Nilesh Vijay Sabnis</div>
+          <div class="flex items-center gap-2 mt-1"><span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider bg-slate-800 px-1.5 py-0.5 rounded">Account: <span id="display-email" class="text-white lowercase"></span></span></div>
         </div>
       </div>
       
@@ -91,10 +92,10 @@
           <button onclick="window.copyApiKey()" id="copy-btn" class="ml-1 text-slate-400 hover:text-white transition-colors" title="Copy to Clipboard"><i class="fa-solid fa-copy"></i></button>
         </div>
 
-        <!-- NEW: DYNAMIC DEVICE MANAGER -->
+        <!-- NEW: DYNAMIC DEVICE MANAGER (Fixed min-width to prevent collapsing) -->
         <div class="flex items-center bg-slate-800 rounded-lg border border-slate-700 p-1 flex-shrink-0">
-          <select id="device-selector" onchange="window.changeDevice()" class="bg-slate-900 text-white text-sm font-semibold rounded-l px-2 py-1 outline-none border-none">
-            <!-- Populated dynamically -->
+          <select id="device-selector" onchange="window.changeDevice()" class="bg-slate-900 text-white text-sm font-semibold rounded-l px-2 py-1 outline-none border-none min-w-[120px] max-w-[200px] truncate">
+            <option value="BoardA">Main Board</option>
           </select>
           <button onclick="window.addNewDevice()" class="px-3 border-l border-slate-600 text-indigo-400 hover:text-indigo-300 font-bold text-sm" title="Add New Hardware Device"><i class="fa-solid fa-plus"></i></button>
         </div>
@@ -157,17 +158,15 @@
     import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-   // 🔴🔴🔴 YOUR FIREBASE CONFIGURATION GOES HERE 🔴🔴🔴
-    // Once you create a Firebase project, paste your keys here:
+    // 🔴🔴🔴 PASTE YOUR FIREBASE CONFIGURATION HERE 🔴🔴🔴
     let firebaseConfig = {
-      apiKey: "AIzaSyBgtQk5LkanpROvrfNz6pWqFlh6ie14LFA",
-      authDomain: "iot-nvs.firebaseapp.com",
-      projectId: "iot-nvs",
-      storageBucket: "iot-nvs.firebasestorage.app",
-      messagingSenderId: "869841023673",
-      appId: "1:869841023673:web:280eed0fdbd4117e78e168"
+      apiKey: "PASTE_YOUR_API_KEY_HERE",
+      authDomain: "PASTE_YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "PASTE_YOUR_PROJECT_ID",
+      storageBucket: "PASTE_YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcdef123456"
     };
-
 
     if (typeof __firebase_config !== 'undefined') firebaseConfig = JSON.parse(__firebase_config);
 
@@ -179,7 +178,6 @@
     let currentUser = null;
     let apiKeyVisible = false;
     
-    // NEW: Dynamic Devices Array
     let userDevices = [{ id: 'BoardA', name: 'Main Board' }];
     let currentDevice = "BoardA";
 
@@ -207,6 +205,10 @@
         document.getElementById('dashboard-screen').classList.remove('hidden');
         document.getElementById('display-email').innerText = user.email;
         document.getElementById('display-apikey').innerText = user.uid; 
+        
+        // Render device list immediately to prevent visual collapse before cloud data arrives
+        window.renderDeviceList(); 
+        
         loadCloudData();
       } else {
         currentUser = null;
@@ -251,7 +253,7 @@
           const data = docSnap.data();
           if(data.tabs) tabs = data.tabs;
           if(data.widgets) widgets = data.widgets;
-          if(data.devices) userDevices = data.devices; // Load dynamic devices
+          if(data.devices && data.devices.length > 0) userDevices = data.devices; 
         }
         window.renderDeviceList();
         window.renderTabs(); 
